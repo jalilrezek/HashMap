@@ -1,0 +1,26 @@
+Number 10 at 12:05PM on April 11: Passes insert case 4. It was after this one that I somehow started failing insert case 4 even though
+I thought I made no changes to the code besides deleting out useless statements.
+ Remove throws exception is not resolved, but that was just from a debugging
+print statement where I try to print out the key, but if key was null, would fail test. Easy fix - if key is
+not null, then print.
+
+13: Confirmed that insert() was not what caused insert case 4 to start failing because I copy and pasted insert()
+from Submission 10 into my code and resubmitted and it still fails insert case 4
+
+14: Problem resolved. growAndRehash() was the problem. Copy and pasted from Submission 10 into my code, and it passes
+insert case 4 now. Insert case 2 and 3 still failing.
+Tried using a text comparison tool. The only differences between the growAndRehash() from submission 12 and the one
+from Submission 10 is that one had a bit more whitespaces. So, I have no idea what was wrong. (Insight below)
+
+15 & 16: On 15, insert case 4 failed. On 16, it succeeded. Both times I submitted the same zip file.
+Therefore, the issue was not that something was different in my code. Somehow my code is wrong and it's producing
+different results on different runs of the autograder which makes no sense.
+
+Somewhere before 20: Updated hashCode() to deal with negative hashCode() values. Do the modulo of M, then if negative,
+re-add M to it. Now, I pass test case 3.
+
+21: Failed "insert works case 4" 2 or 3x beforehand submitting the same zip file, now I pass it. Therefore, i know that
+"insert works case 4" is random.
+
+29-30: Pass Insert Case 4 for all 3 of these. Pass case 3 as well. Failing case 2 still (been failing 2 and 3 all
+along)

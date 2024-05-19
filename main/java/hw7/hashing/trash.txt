@@ -1,0 +1,108 @@
+ private void growAndRehash(K k, V v) { // numElem incremented in insert()
+    System.out.println("Entered growAndRehash()");
+    primesIndex++;
+    if (primesIndex < primes.length) {
+      M = primes[primesIndex];
+    } else {
+      M *= 2; // "switch to doubling capacity for the following rehashes"
+    }
+    Pair[] tmp = new Pair[M];
+    for (int i = 0; i < table.length; i++) { // table.length not updated yet, still original M
+      if (table[i] != null && table[i] != TOMBSTONE) {
+        K keyAtIndexI = (K) table[i].key; // error checking for the type cast?
+        int newIndex = getIndex(keyAtIndexI);
+        tmp[newIndex] = table[i];
+        System.out.println(newIndex);
+      }
+    }
+    int idxOfNew = getIndex(k);
+    tmp[idxOfNew] = new Pair<>(k, v);
+    table = tmp;
+  }
+
+//  private void growAndRehash(K k, V v) { // numElem incremented in insert()
+//    System.out.println("Entered growAndRehash()");
+//    primesIndex++;
+//    if (primesIndex < primes.length) {
+//      M = primes[primesIndex];
+//    } else {
+//      M *= 2; // "switch to doubling capacity for the following rehashes"
+//    }
+//    Pair[] tmp = new Pair[M];
+//    for (int i = 0; i < table.length; i++) { // table.length not updated yet, still original M
+//      if (table[i] != null && table[i] != TOMBSTONE) {
+//        K keyAtIndexI = (K) table[i].key; // error checking for the type cast?
+//        int newIndex = getIndex(keyAtIndexI);
+//        tmp[newIndex] = table[i];
+//        System.out.println(newIndex);
+//      }
+//    }
+//    int idxOfNew = getIndex(k);
+//    tmp[idxOfNew] = new Pair<>(k, v);
+//    table = tmp;
+//  }
+
+
+
+  insert() with commented out old incrementations of numOccupiedArraySpots and numElem:
+    @Override
+    public void insert(K k, V v) throws IllegalArgumentException {
+      // TODO Implement Me!
+      if (k == null || has(k)) {
+        throw new IllegalArgumentException();
+      }
+      numElem++;
+      numOccupiedArraySpots++;
+      System.out.println("numOccupied spots: " + numOccupiedArraySpots);
+      System.out.println("M: " + M);
+      if (numOccupiedArraySpots / M >= LOAD_FACTOR) {
+        growAndRehash(k, v);
+      } else { // must be room for new entry without exceeding load factor
+        int index = getIndex(k);
+        if (table[index] == null) {
+  //      numElem++;
+  //      numOccupiedArraySpots++;
+          table[index] = new Pair(k, v);
+        } else { // spot that that key gets mapped to, is occupied, either by a TOMBSTONE or a valid entry
+          for (int i = 0; i < M; i++) {
+            index = (index + i) % M;
+            if (table[index] == null) { // found an open spot. Can leave now.
+  //          numElem++;
+  //          numOccupiedArraySpots++;
+              table[index] = new Pair(k, v);
+              return;
+            }
+          } // if we get past the for loop, then the table is full. If it wasn't, we left with "return"
+  //      numElem++;
+  //      growAndRehash(k, v);
+        }
+      }
+    }
+
+    My iterator 4/12/10AM
+    private class hashMapArrayIterator<T> implements Iterator<T> {
+        private int numValidEntriesVisited = 0;
+        private int numTotalIndicesVisited = 0;
+
+
+        @Override
+        public boolean hasNext() {
+          return numValidEntriesVisited < numElem;
+        }
+
+        @Override
+        public T next() {
+          if (!hasNext()) {
+            throw new NoSuchElementException();
+          }
+
+          while (table[numTotalIndicesVisited] == null || table[numTotalIndicesVisited].equals(TOMBSTONE)) {
+            numTotalIndicesVisited++;
+          }
+
+          numValidEntriesVisited++;
+
+          return (T) table[numTotalIndicesVisited].getKey();
+
+        }
+      }

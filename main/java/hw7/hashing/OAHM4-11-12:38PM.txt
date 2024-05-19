@@ -1,0 +1,256 @@
+// For some odd reason, it's failing insert case 4, whereas before it was passing it. And I don't know
+// what changed.
+
+
+package hw7.hashing;
+
+import hw7.Map;
+import java.util.Iterator;
+
+public class OpenAddressingHashMap<K, V> implements Map<K, V> {
+
+  private Pair[] table;
+  private int numElem; // num elements
+
+  private int numOccupiedArraySpots; // numElem plus num tombstones. This differs from "numElem" only in that
+  // it is NOT decremented when we replace an entry with a tombstone.
+
+  private int M; // size of array
+
+  private final double LOAD_FACTOR = 0.75;
+
+  private static final Pair<?, ?> TOMBSTONE = new Pair<>(null, null);
+
+  private int primes[] = {2, 5, 11, 23, 47, 97, 197, 397, 797, 1597, 3203, 6421, 12853,
+          25717, 51437,102877, 205759, 411527, 823117, 1646237,3292489, 6584983, 13169977};
+
+  private int primesIndex = 0;
+
+  public OpenAddressingHashMap() {
+    M = primes[primesIndex];
+    this.table = new Pair[M]; // is the size up to me? TA said if you start with more than 5
+    this.numOccupiedArraySpots = 0;
+    this.numElem = 0; // you lose points. Growing is a big part of the assignment. Starting with large size
+  } // reduces growth.
+
+  private int getIndex(K key) {
+    return key.hashCode() % M;
+  }
+
+  private void growAndRehash(K k, V v) { // params are of the newly inserted element
+    primesIndex++;
+    if (primesIndex < primes.length) {
+      M = primes[primesIndex];
+    } else {
+      M *= 2; // "switch to doubling capacity for the following rehashes"
+    }
+    Pair[] tmp = new Pair[M];
+    for (int i = 0; i < table.length; i++) {
+      if (table[i] != null && table[i] != TOMBSTONE) {
+        K keyAtIndexI = (K) table[i].key;
+        int newIndex = getIndex(keyAtIndexI);
+        if (tmp[newIndex] == null) {
+          tmp[newIndex] = table[i];
+        } else {
+          newIndex++;
+          while (tmp[newIndex] != null) { // it's possible that we already have a collision in the new table
+            newIndex = (newIndex + 1) % M;
+          }
+          tmp[newIndex] = table[i];
+        }
+      }
+    }
+    // insert the new element instead of inserting it into old array then having to re-find it
+    int idxOfNew = getIndex(k);
+    if (tmp[idxOfNew] == null) {
+      tmp[idxOfNew] = new Pair<>(k, v);
+    } else {
+      idxOfNew++;
+      while (tmp[idxOfNew] != null) {
+        idxOfNew = (idxOfNew + 1) % M;
+      }
+      tmp[idxOfNew] = new Pair<>(k, v);
+    }
+
+    table = tmp;
+  }
+
+
+  @Override
+  public void insert(K k, V v) throws IllegalArgumentException {
+    // TODO Implement Me!
+    if (k == null || has(k)) {
+      throw new IllegalArgumentException();
+    }
+    numElem++;
+    numOccupiedArraySpots++;
+    System.out.println("numOccupied spots: " + numOccupiedArraySpots);
+    System.out.println("M: " + M);
+    if (numOccupiedArraySpots / M >= LOAD_FACTOR) {
+      growAndRehash(k, v);
+    } else { // must be room for new entry without exceeding load factor
+      int index = getIndex(k);
+      if (table[index] == null) {
+        table[index] = new Pair(k, v);
+      } else { // spot that that key gets mapped to, is occupied, either by a TOMBSTONE or a valid entry
+        for (int i = 0; i < M; i++) {
+          index = (index + i) % M;
+          if (table[index] == null) { // found an open spot. Can leave now.
+            table[index] = new Pair(k, v);
+            return;
+          }
+        }
+      }
+    }
+    System.out.println("insert(): Impossibly managed to escape conditionals");
+  }
+
+  @Override
+  public V remove(K k) throws IllegalArgumentException {
+    // TODO Implement Me!
+    if (k == null || !has(k)) {
+      if (k == null) {
+        System.out.println("In remove() k is null");
+      } else if (k != null && !has(k)) {
+        System.out.println("In remove() Doesn't have key: " + k.toString());
+      }
+      throw new IllegalArgumentException();
+    } // if we got past here, it must have the key.
+
+    int index = getIndex(k);
+    K key = (K) table[index].key;
+
+    if (key.equals(k)) {
+      numElem--;
+      V removedVal = (V) table[index].value;
+      table[index] = TOMBSTONE; // replace existing entry
+      return removedVal;
+
+    } else {
+      for (int i = 0; i < M; i++) {
+        index = (index + i) % M;
+        if ( ((K) table[index].key).equals(k) ) { // found it. Leave now
+          numElem--;
+          V removedVal = (V) table[index].value; // chatGPT says will work even if table[index].value is null
+          table[index] = TOMBSTONE;
+          return removedVal;
+        }
+      }
+      // if it wasn't right at the index, it must have been somewhere else, because we checked that
+      // the array has the element earlier. So, by the time we're done here, should have nothing more
+      // to do.
+    }
+    assert false; // should not be able to reach statement below. This function should never return
+    return null; // null
+  }
+
+  @Override
+  public void put(K k, V v) throws IllegalArgumentException {
+    // TODO Implement Me!
+    if (k == null || !has(k)) {
+      throw new IllegalArgumentException();
+    } // if we get past this, it has the key. Thus, table[indexOfKey] != null
+    int index = getIndex(k);
+    K key = (K) table[index].key;
+    if (key.equals(k)) {
+      table[index] = new Pair<>(k, v); // replace existing entry
+    } else {
+      for (int i = 0; i < M; i++) {
+        index = (index + i) % M;
+        if ( ((K) table[index].key).equals(k) ) { // found it. Leave now
+          table[index] = new Pair<>(k, v);
+          return;
+        }
+      }
+      // if it wasn't right at the index, it must have been somewhere else, because we checked that
+      // the array has the element earlier. So, by the time we're done here, should have nothing more
+      // to do.
+    }
+  }
+
+  @Override
+  public V get(K k) throws IllegalArgumentException {
+    // TODO Implement Me!
+    if (k == null || !has(k)) {
+      throw new IllegalArgumentException();
+    }
+    int index = getIndex(k);
+    K key = (K) table[index].key;
+    if (key.equals(k)) {
+      return (V) table[index].value; // replace existing entry
+    } else {
+      for (int i = 0; i < M; i++) {
+        index = (index + i) % M;
+        if ( ((K) table[index].key).equals(k) ) { // found it. Leave now.
+          return (V) table[index].value;
+        }
+      }
+      // if it wasn't right at the index, it must have been somewhere else, because we checked that
+      // the array has the element earlier. So, by the time we're done here, should have nothing more
+      // to do.
+    }
+    assert false; // statement below should be unreachable so if we get to here, better throw an error.
+    return null; // either way, should never return null unless this unreachable statement was reached.
+    // so can tell if it was reached if get(k) returns null.
+  }
+
+  @Override
+  public boolean has(K k) {
+    // TODO Implement Me!
+    if (empty()) { // I thought this shouldn't be necessary, but now it passes "has() edge case" test on Gradescope
+      return false; // so I guess this was necessary.
+    }
+    if (k == null) {
+      throw new IllegalArgumentException();
+    }
+    int index = getIndex(k);
+    if (table[index] == null) { // either nothing's there, or a Tombstone which has null k, v
+      return false;
+    } else { // the entry has either another valid entry whose key was mapped to the same index, or a tombstone
+      for (int i = 0; i < M; i++) {
+        index = (index + i) % M;
+        if (table[index] == null) { // preceded by a tombstone, now the next entry is null. So the key isn't there.
+          return false;
+        } else if (table[index].equals(TOMBSTONE))  { // it's a tombstone. Gotta keep looking cuz entry could be after
+        } else if ( ((K) table[index].key).equals(k) ) { // found it. Leave now.
+          return true;
+        }
+      }
+      return false; // it's not there
+    }
+
+  }
+
+  @Override
+  public int size() {
+    // TODO Implement Me!
+    return numElem;
+  }
+
+// @Override // my addition. Show size of underlying array.
+//  public int totalSize() {
+//    return M;
+//  }
+
+
+
+  public boolean empty() {
+    return numElem == 0;
+  }
+
+  private static class Pair<K,V> {
+    K key;
+    V value;
+
+    Pair(K k, V v) {
+      this.key = k;
+      this.value = v;
+    }
+  }
+
+  @Override
+  public Iterator<K> iterator() {
+    // TODO Implement Me!
+    return null;
+  }
+}
